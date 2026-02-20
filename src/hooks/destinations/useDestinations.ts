@@ -5,7 +5,7 @@ import { Destination, DestinationOption } from "../../types/destinations";
 async function fetchDestinations(): Promise<Destination[]> {
   return getRequest("/destinations");
 }
-
+//hola
 export function useDestinations() {
   const {
     data: destinations,
