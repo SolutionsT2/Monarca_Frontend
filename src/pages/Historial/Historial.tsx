@@ -15,6 +15,8 @@ import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
 import { useApp } from "../../hooks/app/appContext";
 
+//prueba
+
 //Interface for travel records data
 //interface TravelRecord {
 //id: string;
