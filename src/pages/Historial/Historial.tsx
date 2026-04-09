@@ -82,7 +82,7 @@ const renderStatus = (status: string) => {
       styles = "text-white bg-[#6c757d]";
     }
     return (
-      <span className={`text-xs p-1 rounded-sm ${styles}`}>
+      <span className={`text-[10px] sm:text-xs p-1 rounded-sm whitespace-nowrap ${styles}`}>
         {statusText}
       </span>
     )
@@ -127,7 +127,7 @@ export const Historial = () => {
           index,
           action: (
             <Button
-              className="bg-[var(--white)] text-[var(--blue)] p-1 rounded-sm"
+              className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
               label="Ver detalles"
               id={`details-${index}`}
               driver-id="details"
@@ -182,18 +182,24 @@ export const Historial = () => {
   return (
     <>
     <Tutorial page="history" run={tutorial}>
+      <div className="flex-1 max-w-full">
         <GoBack />
-        <div className="max-w-full p-6 bg-[#eaeced] rounded-lg shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-[#0a2c6d] mb-4">
+        <div className="p-4 sm:p-6 bg-[#eaeced] rounded-lg shadow-xl overflow-hidden">
+      
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
                 Historial de viajes
               </h2>
-              <RefreshButton />
-          </div>
+                <RefreshButton />
+            </div>
 
           {/* Travel history table component */}
-          <div id="list_requests">
-            <Table columns={columnsSchema} data={dataWithActions} itemsPerPage={5} />
+            <div id="list_requests">
+              <Table columns={columnsSchema} data={dataWithActions} itemsPerPage={5} />
+            </div>
+            <p className="block sm:hidden text-center text-gray-500 text-[10px] mt-2 italic">
+              Desliza hacia los lados para ver toda la información
+            </p>
           </div>
         </div>
       </Tutorial>

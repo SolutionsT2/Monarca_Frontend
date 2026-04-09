@@ -6,20 +6,27 @@ import SidebarOption from "./SiderbarOption";
 
 import { AuthState, Permission } from "../hooks/auth/authContext";
 
-function Sidebar({ user }: { user: AuthState }) {
+interface SidebarProps {
+  user: AuthState;
+  isOpen: boolean; // Indica si el menú está desplegado en móvil
+}
+
+function Sidebar({ user, isOpen }: SidebarProps) {
   return (
     <aside
       id="logo-sidebar"
-      className="w-[200px] pt-24 bg-[var(--gray)] text-[var(--black)]"
+      className={`fixed top-0 left-0 z-40 w-[240px] h-screen pt-24 transition-transform bg-[var(--gray)] border-r border-gray-200 
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} 
+        lg:translate-x-0`}
       aria-label="Sidebar"
     >
-      <div className="h-full px-3 pb-4 overflow-y-auto">
-        <div className="flex items-center bg-[var(--dark-blue)] mb-6 w-[120px] mx-auto p-4 rounded-lg">
+      <div className="h-full px-3 pb-4 overflow-y-auto bg-[var(--gray)]">
+        <div className="flex items-center bg-[var(--dark-blue)] mb-6 w-[100px] mx-auto p-3 rounded-xl">
             <img src={logo} className="invert mx-auto" alt="Monarca Logo" />
         </div>
-        <div className="flex flex-col items-center justify-center mb-6 text-center">
-          <p className="text-[var(--blue)] font-bold">{user.userName} {user.userLastName} </p>
-          <p className="text-[var(--blue)] text-sm">{user.userRole}</p>
+        <div className="flex flex-col items-center justify-center mb-6 text-center px-2">
+          <p className="text-[var(--blue)] font-bold truncate w-full">{user.userName} {user.userLastName} </p>
+          <p className="text-[var(--ultra-light-blue)] text-xs font-medium uppercase tracking-wider">{user.userRole}</p>
         </div>
         <ul className="space-y-2 font-medium">
             <SidebarOption 

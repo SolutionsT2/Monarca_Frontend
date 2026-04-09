@@ -10,7 +10,7 @@ import { Permission, useAuth } from '../hooks/auth/authContext';
 import { useNavigate } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
 import { Tutorial } from '../components/Tutorial';
-
+import { PolicyAlert } from '../components/Refunds/PolicyAlert';
 import { Navigation, Pagination } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import FilePreviewer from '../components/Refunds/FilePreviewer';
@@ -67,6 +67,8 @@ const RequestInfo: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
+  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -84,13 +86,17 @@ const RequestInfo: React.FC = () => {
           destinations: response.requests_destinations.map((dest: any) => dest.destination.city).join(', '),
         });
         setSelectedAgency(response.id_travel_agency || '');
+        const violationsRes = await getRequest(`/requests/${id}/policy-violations`);
+        if (violationsRes && violationsRes.violations) {
+          setPolicyViolations(violationsRes.violations);
+        }
       } catch (error) {
         console.error('Error fetching request data:', error);
       }
     };
 
     fetchData();
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     // Get the visited pages from localStorage
@@ -670,6 +676,20 @@ const RequestInfo: React.FC = () => {
           </section>}
 
           {/* Botones de acción */}
+          {policyViolations.length > 0 && (
+            <section className="mb-8 border-2 border-red-200 rounded-lg p-4 bg-white shadow-inner">
+              <h3 className="text-lg font-bold text-red-700 mb-2 flex items-center">
+                <span className="mr-2">🔍</span> Resultado de Auditoría Automática
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                El sistema detectó los siguientes conflictos con la política de gastos. 
+                Revise cada uno antes de proceder.
+              </p>
+              
+              <PolicyAlert violations={policyViolations} />
+            </section>
+          )}
+
           {authState.userPermissions.includes("approve_request" as Permission) &&
           <>
               {data.status === "Pending Review" &&
@@ -694,13 +714,14 @@ const RequestInfo: React.FC = () => {
                   disabled={!selectedAgency || data.status !== "Pending Review"}
                   className={`flex-1 py-3 rounded-lg font-semibold transition
                     ${
-                      selectedAgency && data.status === "Pending Review"
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                      policyViolations.length > 0 
+                        ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }
+                     ${(!selectedAgency) && 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 id="approve-request-button"
                 >
-                  Aprobar
+                  {policyViolations.length > 0 ? 'Aprobar con Excepción' : 'Aprobar'}
                 </button>
                 <button
                   onClick={requestChanges}

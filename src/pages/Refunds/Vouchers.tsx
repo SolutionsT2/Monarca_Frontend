@@ -13,6 +13,7 @@ import formatMoney from "../../utils/formatMoney";
 import { toast } from "react-toastify";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
+import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
 
 interface FormDataRow extends DynamicTableRow {
   spentClass: string;
@@ -44,6 +45,8 @@ export const Vouchers = () => {
     },
   });
   const [commentValue, setCommentValue] = useState<string>("");
+  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -61,18 +64,20 @@ export const Vouchers = () => {
   }, []);
 
   const handleSubmitRefund = async () => {
+    setPolicyViolations([]);
+    setIsSubmitting(true);
     try {
       // comprobante_pendiente, comprobante_denegado, comprobante_aprobado
-      let formDataToSend = null;
+      
       for (const rowData of formData) {
-        formDataToSend = new FormData();
+        const formDataToSend = new FormData();
 
         formDataToSend.append(
           "id_request",
           trip.id.toString()
         );
         //formDataToSend.append("comment", commentDescriptionOfSpend);
-        formDataToSend.append("date", new Date().toISOString());
+        formDataToSend.append("date", rowData.date);
         formDataToSend.append("class", rowData.spentClass);
         formDataToSend.append("amount", rowData.amount.toString());
         formDataToSend.append("tax_type", rowData.taxIndicator);
@@ -88,23 +93,26 @@ export const Vouchers = () => {
         }
 
         await postRequest("/vouchers/upload", formDataToSend);
-        toast.success("Solicitud de reembolso enviada con éxito.");
       }
       await patchRequest(`/requests/finished-uploading-vouchers/${id}`, {});
+      toast.success("Solicitud de reembolso enviada con éxito.");
       navigate("/refunds");
-    } catch (err) {
-      console.error(
-        "Error al enviar la solicitud de reembolso: ",
-        err instanceof Error ? err.message : err
-      );
-      toast.error(
-        "Error al enviar la solicitud de reembolso. Por favor, inténtelo de nuevo más tarde."
-      );
-    } finally {
-      // Reset form data and comment after submission
-      setFormData([]);
-      //setCommentDescriptionOfSpend("");
+    } catch (err: any) {
+      if (err.response?.status === 422) {
+        const summary = err.response.data.policy_summary;
+        
+        setPolicyViolations(summary.violations); 
+        
+        toast.error("El comprobante no cumple con las políticas.");
+      } else if (err.response?.status === 403) {
+        toast.error("No tienes permiso para realizar esta acción.");
+    } else {
+      console.error("Error inesperado:", err);
+      toast.error("Error al procesar la solicitud. Revisa tu conexión.");
     }
+  } finally {
+    setIsSubmitting(false);
+  }
   };
   const columnsSchemaVauchers = [
     {
@@ -311,12 +319,35 @@ export const Vouchers = () => {
             initialData={formData}
             onDataChange={handleDynamicTableDataChange}
           />
+          {policyViolations.length > 0 && (
+            <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">🚫</span>
+                <h4 className="font-bold">No se puede enviar la solicitud por los siguientes motivos:</h4>
+              </div>
+              <ul className="list-disc list-inside ml-4">
+                {policyViolations.map((violation, index) => (
+                  <li key={index} className="text-sm py-1">
+                    {violation.message} 
+                    <span className="ml-2 text-[10px] bg-red-200 px-1 rounded font-bold uppercase">
+                      {violation.severity}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs italic">
+                * Por favor corrige los montos o sube los archivos faltantes para continuar.
+              </p>
+            </div>
+          )}
         </div>
         {/*
         * Display a field to add a comment to the refund request.
         * The comment is stored in the commentDescriptionOfSpend state,
         * and is updated with the setCommentDescriptionOfSpend function.
         */}
+        <PolicyAlert violations={policyViolations} />
+        
         <h3 className="text-lg font-bold text-[#0a2c6d] mt-4 mb-2">Comentario</h3>
         <InputField 
           id="comment-refund"
@@ -334,12 +365,13 @@ export const Vouchers = () => {
           </Link>
           <button
             id="submit-refund"
-            className="px-4 py-2 bg-[#0a2c6d] text-white rounded-md hover:bg-[#0d3d94] transition-colors hover:cursor-pointer"
-            onClick={() => {
-              handleSubmitRefund();
-            }}
+            disabled={isSubmitting}
+            className={`px-4 py-2 text-white rounded-md transition-colors ${
+                isSubmitting ? 'bg-gray-400' : 'bg-[#0a2c6d] hover:bg-[#0d3d94] hover:cursor-pointer'
+            }`}
+            onClick={handleSubmitRefund}
           >
-            Enviar Solicitud
+            E{isSubmitting ? "Procesando..." : "Enviar Solicitud"}
           </button>
         </div>
       </div>
