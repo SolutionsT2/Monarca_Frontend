@@ -486,6 +486,11 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     setShowConfirmModal(false);
     const data = pendingFormData;
 
+    if (!data.id_origin_city) {
+      toast.error("Selecciona una ciudad de origen");
+      return;
+    }
+
     const requests_destinations = data.requests_destinations.map(
       (d, idx, arr) => {
         if (!d.id_destination) {
@@ -509,7 +514,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       },
     );
 
-    const payload = {
+    const payload: CreateRequest = {
       id_origin_city: data.id_origin_city,
       id_origin_airport: data.id_origin_airport || undefined,
       title: data.motive,
