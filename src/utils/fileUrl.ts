@@ -21,6 +21,10 @@ export const resolveFileUrl = (rawUrl: string): string => {
     return `${API_BASE_URL}/${value.replace(/^undefined\/+/, "")}`;
   }
 
+  if (value.startsWith("//files/")) {
+    return `${API_BASE_URL}/${value.replace(/^\/\/+/, "")}`;
+  }
+
   if (value.startsWith("/files/")) {
     return `${API_BASE_URL}${value}`;
   }
