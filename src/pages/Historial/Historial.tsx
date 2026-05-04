@@ -188,73 +188,74 @@ export const Historial = () => {
     mapRecordToRow,
   ]);
 
-  const fetchTravelRecords = useCallback(async () => {
+  useEffect(() => {
     if (isTravelAgentReservedHistoryView) return;
 
-    try {
-      const endpoint = authState.userPermissions.includes(
-        "create_request" as Permission
-      )
-        ? "/requests/user"
-        : authState.userPermissions.includes("check_budgets" as Permission)
-          ? "/requests/to-approve-SOI"
-          : "/requests/all";
-      let response = await getRequest(endpoint);
-      if (authState.userPermissions.includes("approve_request" as Permission)) {
-        response = response.filter(
-          (record: any) =>
-            !["Pending Review", "Denied", "Cancelled"].includes(
-              record.status
-            ) && record.id_admin === authState.userId
-        );
-      }
-      if (
-        authState.userPermissions.includes("submit_reservations" as Permission)
-      ) {
-        const travelAgentsIds = response
-          .map((request: any) =>
-            request.travel_agency.users.map((user: any) => user.id)
-          )
-          .flat();
-        response = response.filter(
-          (record: any) =>
-            ![
-              "Pending Review",
-              "Denied",
-              "Cancelled",
-              "Changes Needed",
-              "Pending Accounting Approval",
-              "Pending Reservations",
-            ].includes(record.status) &&
-            travelAgentsIds.includes(authState.userId)
-        );
-      }
-      if (authState.userPermissions.includes("check_budgets" as Permission)) {
-        response = response.filter(
-          (record: any) =>
-            ["Pending Accounting Approval"].includes(record.status) &&
-            record.id_SOI === authState.userId
-        );
-      }
-      setDataWithActions(
-        response?.map((record: any, index: number) =>
-          mapRecordToRow(record, index)
+    const fetchTravelRecords = async () => {
+      try {
+        const endpoint = authState.userPermissions.includes(
+          "create_request" as Permission
         )
-      );
-    } catch (error) {
-      console.error("Error fetching travel records:", error);
-      toast.error("Error al obtener el historial de viajes.");
-    }
-  }, [
-    authState.userPermissions,
-    authState.userId,
-    isTravelAgentReservedHistoryView,
-    mapRecordToRow,
-  ]);
+          ? "/requests/user"
+          : authState.userPermissions.includes("check_budgets" as Permission)
+            ? "/requests/to-approve-SOI"
+            : "/requests/all";
+        let response = await getRequest(endpoint);
+        if (
+          authState.userPermissions.includes("approve_request" as Permission)
+        ) {
+          response = response.filter(
+            (record: any) =>
+              !["Pending Review", "Denied", "Cancelled"].includes(
+                record.status
+              ) && record.id_admin === authState.userId
+          );
+        }
+        if (
+          authState.userPermissions.includes(
+            "submit_reservations" as Permission
+          )
+        ) {
+          const travelAgentsIds = response
+            .map((request: any) =>
+              request.travel_agency.users.map((user: any) => user.id)
+            )
+            .flat();
+          response = response.filter(
+            (record: any) =>
+              ![
+                "Pending Review",
+                "Denied",
+                "Cancelled",
+                "Changes Needed",
+                "Pending Accounting Approval",
+                "Pending Reservations",
+              ].includes(record.status) &&
+              travelAgentsIds.includes(authState.userId)
+          );
+        }
+        if (
+          authState.userPermissions.includes("check_budgets" as Permission)
+        ) {
+          response = response.filter(
+            (record: any) =>
+              ["Pending Accounting Approval"].includes(record.status) &&
+              record.id_SOI === authState.userId
+          );
+        }
+        setDataWithActions(
+          response?.map((record: any, index: number) =>
+            mapRecordToRow(record, index)
+          )
+        );
+      } catch (error) {
+        console.error("Error fetching travel records:", error);
+        toast.error("Error al obtener el historial de viajes.");
+      }
+    };
 
-  useEffect(() => {
     fetchTravelRecords();
-  }, [fetchTravelRecords]);
+  }, [isTravelAgentReservedHistoryView, authState.userId, mapRecordToRow]);
 
   useEffect(() => {
       // Get the visited pages from localStorage
@@ -291,7 +292,7 @@ export const Historial = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
                 {pageTitle}
               </h2>
-              <RefreshButton onClick={fetchTravelRecords} />
+              <RefreshButton />
           </div>
 
           {/* Travel history table component */}
