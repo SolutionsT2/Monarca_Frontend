@@ -182,6 +182,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="tenant_management"
           />
         )}
+        {authState.userPermissions.includes("import_employees" as Permission) && (
+          <Mosaic
+            title="Importar empleados"
+            iconPath="/assets/roles.png"
+            link="/company-admin/import-employees"
+            id="import_employees"
+          />
+        )}
         {isCompanyAdmin && (
           <Mosaic
             title="Departamentos"
@@ -248,4 +256,5 @@ Modification History:
 - 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
 - 2026-04-14 | Fabrizio | Added the Policies Management mosaic for the SOI workflow.
 - 2026-04-27 | Juan de Dios Gastélum | Added Delegaciones de sustitutos and Matriz de autorización mosaics for CompanyAdmin. Updated asset paths for Departamentos, Centros de costos, and Cuentas contables.
+- 2026-05-14 | Added Importar empleados mosaic for users with import_employees (matches sidebar).
 */
