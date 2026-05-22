@@ -597,9 +597,10 @@ const RefundsAcceptance: React.FC = () => {
                 </h2>
                 {/* Display the existing PDF using an iframe */}
                 <Swiper
-                  modules={[Navigation]}
+                  modules={[Navigation, Pagination]}
                   spaceBetween={50}
                   slidesPerView={1}
+                  pagination={{ clickable: true }}
                   onBeforeInit={(swiper: any) => {
                     if (typeof swiper.params.navigation !== "boolean") {
                       swiper.params.navigation.prevEl = prevRef.current;
