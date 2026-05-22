@@ -11,12 +11,14 @@ import { toast } from 'react-toastify';
 import EmployeeViewTable from '../../components/companyadmin/EmployeeViewTable';
 import OrgChart from '../../components/companyadmin/OrgChart';
 import { useApp } from '../../hooks/app/appContext';
+import { useAuth } from '../../hooks/auth/authContext';
 import { buildOrgTree } from '../../utils/flatToTree';
-import { getRequest } from '../../utils/apiService';
+import { getRequest, patchRequest } from '../../utils/apiService';
 
 type ViewType = 'table' | 'tree';
 
 interface PreviewEmployee {
+  id: string;
   row: number;
   employeeNumber: string;
   name: string;
@@ -25,13 +27,16 @@ interface PreviewEmployee {
   email: string | null;
   supplierNumber: string | null;
   departmentId: string | null;
-  departmentName?: string | null;
+  departmentName: string | null;
   bossEmployeeNumber: string | null;
   availabilityStatus: string;
   signupDate: string | null;
   lastchangeDate: string | null;
   validationErrors: string[];
   roleName?: string; // Display name of the assigned role
+  idRole?: string | null;
+  isUpdate: boolean;
+  suggestedRoleId: string | null;
 }
 
 interface AvailableRole {
@@ -60,24 +65,30 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
  */
 const ViewEmployees = () => {
   const { setPageTitle } = useApp();
+  const { authState } = useAuth();
   const [employees, setEmployees] = useState<PreviewEmployee[]>([]);
   const [availableRoles, setAvailableRoles] = useState<AvailableRole[]>([]);
   const [roleByEmpNo, setRoleByEmpNo] = useState<Record<string, string>>({});
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [view, setView] = useState<ViewType>('table');
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     setPageTitle('Ver empleados');
   }, [setPageTitle]);
 
-  // Fetch employees from backend
+  // Fetch employees and departments from backend
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchEmployeesAndDepts = async () => {
       try {
         setIsLoading(true);
-        const [usersResponse, rolesResponse] = await Promise.all([
+        const companyId = authState.userCompanyId;
+
+        const [usersResponse, rolesResponse, deptsResponse] = await Promise.all([
           getRequest('/users'),
           getRequest('/roles'),
+          companyId ? getRequest(`/companies/${companyId}/departments`) : Promise.resolve([]),
         ]);
         
         // Build role map for quick lookup
@@ -86,6 +97,18 @@ const ViewEmployees = () => {
         rolesArray.forEach((role: any) => {
           roleMap.set(role.id, role.name);
         });
+
+        // Parse and set departments
+        const rawDepts = Array.isArray(deptsResponse)
+          ? deptsResponse
+          : deptsResponse?.departments || deptsResponse?.data || [];
+        const mappedDepts = rawDepts
+          .map((d: any) => ({
+            id: String(d.id || d.departmentId || '').trim(),
+            name: String(d.name || '').trim(),
+          }))
+          .filter((d: any) => d.id && d.name);
+        setDepartments(mappedDepts);
 
         // Transform response to PreviewEmployee type - only include employees with employee numbers
         const employeeList = Array.isArray(usersResponse) ? usersResponse : usersResponse?.users || [];
@@ -103,6 +126,7 @@ const ViewEmployees = () => {
           .map((emp: any, idx: number) => {
             const roleName = roleMap.get(emp.idRole) || 'Sin rol asignado';
             return {
+              id: emp.id,
               row: idx + 1,
               employeeNumber: emp.employeeNumber || '',
               name: emp.name || '',
@@ -111,7 +135,7 @@ const ViewEmployees = () => {
               email: emp.email || null,
               supplierNumber: emp.supplierNumber || null,
               departmentId: emp.idDepartment || null,
-              departmentName: emp.departmentName || null,
+              departmentName: emp.department?.name || emp.departmentName || null,
               bossEmployeeNumber: emp.idManager ? idToEmployeeNumberMap.get(emp.idManager) || null : null,
               availabilityStatus: emp.availabilityStatus || 'active',
               signupDate: emp.signupDate || null,
@@ -119,6 +143,8 @@ const ViewEmployees = () => {
               validationErrors: [],
               roleName: roleName,
               idRole: emp.idRole || null,
+              isUpdate: false,
+              suggestedRoleId: null,
             };
           });
         
@@ -129,9 +155,14 @@ const ViewEmployees = () => {
             empNoToRoleId[emp.employeeNumber] = emp.idRole;
           }
         });
-
         setEmployees(mapped);
-        setAvailableRoles(rolesArray.map((r: any) => ({ id: r.id, name: r.name })));
+        const filteredRoles = rolesArray
+          .filter((role: any) => {
+            const normalizedName = role.name?.toLowerCase().replace(/\s+/g, '') ?? '';
+            return normalizedName !== 'administrador' && normalizedName !== 'superadmin';
+          })
+          .map((r: any) => ({ id: r.id, name: r.name }));
+        setAvailableRoles(filteredRoles);
         setRoleByEmpNo(empNoToRoleId);
       } catch (error) {
         console.error('Error fetching employees:', error);
@@ -147,8 +178,29 @@ const ViewEmployees = () => {
       }
     };
 
-    fetchEmployees();
-  }, []);
+    fetchEmployeesAndDepts();
+  }, [refreshTrigger, authState.userCompanyId]);
+
+  const handleUpdateEmployee = async (
+    employeeId: string,
+    departmentId: string | null,
+    bossId: string | null,
+    roleId: string,
+  ) => {
+    try {
+      await patchRequest(`/users/${employeeId}`, {
+        idDepartment: departmentId,
+        idManager: bossId,
+        idRole: roleId,
+      });
+      toast.success('Información del empleado actualizada correctamente');
+      setRefreshTrigger((prev) => prev + 1);
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      toast.error(extractErrorMessage(error, 'No se pudo actualizar el empleado.'));
+      throw error;
+    }
+  };
 
   const tree = useMemo(
     () => buildOrgTree(employees),
@@ -202,6 +254,9 @@ const ViewEmployees = () => {
             {view === 'table' ? (
               <EmployeeViewTable
                 employees={employees}
+                departments={departments}
+                availableRoles={availableRoles}
+                onUpdateEmployee={handleUpdateEmployee}
               />
             ) : tree && tree.roots && tree.roots.length > 0 ? (
               <OrgChart
