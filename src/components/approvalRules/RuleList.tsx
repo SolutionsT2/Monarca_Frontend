@@ -1,5 +1,6 @@
 /**
- * Description: Component to display the list of approval rules with edit and delete actions.
+ * Description: Component to display the list of approval rules with edit, delete,
+ * and reorder actions.
  */
 
 import React, { useState } from "react";
@@ -7,6 +8,7 @@ import { ApprovalRule, RuleCondition } from "../../types/approvalRules";
 import { Button } from "../ui/Button";
 import { useGetApprovalRules } from "../../hooks/approvalRules/useGetApprovalRules";
 import { useDeleteApprovalRule } from "../../hooks/approvalRules/useDeleteApprovalRule";
+import { useUpdateApprovalRule } from "../../hooks/approvalRules/useUpdateApprovalRule";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -51,7 +53,8 @@ interface RuleListProps {
 }
 
 /**
- * Renders a table of all approval rules with options to create, edit, or delete each one.
+ * Renders a table of all approval rules with options to create, edit, delete,
+ * and reorder each one via up/down arrows.
  * @param onEdit Callback triggered when the user selects a rule to edit.
  * @param onCreate Callback triggered when the user wants to create a new rule.
  * @returns React component with the rules table.
@@ -59,10 +62,36 @@ interface RuleListProps {
 export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
   const { data: rules, isLoading } = useGetApprovalRules();
   const { mutate: deleteRule, isPending: isDeleting } = useDeleteApprovalRule();
+  const { mutate: updateRule, isPending: isReordering } =
+    useUpdateApprovalRule();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingDeleteName, setPendingDeleteName] = useState<string>("");
+
+  /**
+   * Moves a rule up or down in the evaluation order by swapping priorities
+   * with the adjacent rule.
+   * @param index Current position of the rule in the sorted list.
+   * @param direction Direction to move: 'up' decreases priority, 'down' increases it.
+   */
+  const handleMove = (index: number, direction: "up" | "down") => {
+    if (!rules) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= rules.length) return;
+
+    const ruleA = rules[index];
+    const ruleB = rules[targetIndex];
+
+    // Use array indices as fallback priorities when both values are equal.
+    const priorityA =
+      ruleA.priority !== ruleB.priority ? ruleA.priority : index;
+    const priorityB =
+      ruleA.priority !== ruleB.priority ? ruleB.priority : targetIndex;
+
+    updateRule({ ruleId: ruleA.id, data: { priority: priorityB } });
+    updateRule({ ruleId: ruleB.id, data: { priority: priorityA } });
+  };
 
   /**
    * Opens the confirmation modal before permanently deleting an approval rule.
@@ -108,6 +137,10 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
           <p className="text-sm text-gray-500 mt-0.5">
             Define quién autoriza cada tipo de solicitud
           </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Las reglas se evalúan en orden - la primera que coincida con la
+            solicitud es la que se aplica.
+          </p>
         </div>
         <Button
           onClick={onCreate}
@@ -121,6 +154,9 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="py-3 px-4 text-sm font-medium text-gray-600 text-center w-20">
+                Orden
+              </th>
               <th className="py-3 px-6 text-sm font-medium text-gray-600">
                 Nombre
               </th>
@@ -139,13 +175,44 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
             </tr>
           </thead>
           <tbody>
-            {rules?.map((rule) => (
+            {rules?.map((rule, index) => (
               <tr
                 key={rule.id}
                 className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
               >
-                <td className="py-4 px-6 font-medium text-gray-800">
-                  {rule.name}
+                {/* Evaluation order with up/down controls */}
+                <td className="py-4 px-4 text-center">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={() => handleMove(index, "up")}
+                      disabled={index === 0 || isReordering}
+                      className="text-gray-400 hover:text-blue-600 disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                      title="Subir prioridad"
+                    >
+                      ▲
+                    </button>
+                    <span className="text-xs font-bold text-blue-700 w-5 text-center">
+                      {index + 1}
+                    </span>
+                    <button
+                      onClick={() => handleMove(index, "down")}
+                      disabled={
+                        index === (rules?.length ?? 0) - 1 || isReordering
+                      }
+                      className="text-gray-400 hover:text-blue-600 disabled:opacity-20 disabled:cursor-not-allowed leading-none"
+                      title="Bajar prioridad"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </td>
+                <td className="py-4 px-6">
+                  <p className="font-medium text-gray-800">{rule.name}</p>
+                  {rule.description && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {rule.description}
+                    </p>
+                  )}
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex flex-col gap-1">
@@ -205,7 +272,7 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
             {rules?.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="py-12 text-center text-gray-400 text-sm"
                 >
                   Sin reglas. Crea la primera para comenzar.

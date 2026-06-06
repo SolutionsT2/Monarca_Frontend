@@ -3,6 +3,7 @@
  */
 
 import React from "react";
+import { detectConditionContradiction } from "../../utils/conditionValidation";
 import {
   RuleCondition,
   ConditionField,
@@ -189,9 +190,19 @@ export const ConditionBuilder = ({
                   onChange={(e) =>
                     handleChange(index, { value: e.target.value })
                   }
+                  onWheel={(e) => e.currentTarget.blur()}
                   placeholder="0"
-                  className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full text-sm border rounded-lg px-3 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    String(condition.value).trim() === ""
+                      ? "border-red-400"
+                      : "border-gray-300"
+                  }`}
                 />
+                {String(condition.value).trim() === "" && (
+                  <p className="text-xs text-red-500 mt-1">
+                    El monto no puede estar vacío.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -231,7 +242,15 @@ export const ConditionBuilder = ({
           )}
         </div>
       ))}
-
+      {(() => {
+        const contradiction = detectConditionContradiction(conditions);
+        return contradiction ? (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3 text-sm text-amber-800">
+            <span className="shrink-0 mt-0.5">⚠️</span>
+            <p>{contradiction}</p>
+          </div>
+        ) : null;
+      })()}
       <button
         type="button"
         onClick={handleAdd}

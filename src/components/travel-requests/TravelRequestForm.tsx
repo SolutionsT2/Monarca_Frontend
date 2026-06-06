@@ -52,13 +52,7 @@ const priorityOptions: Option[] = [
   { id: "baja", name: "Baja" },
 ];
 
-const currencyCodes: string[] = [
-  "MXN",
-  "USD",
-  "EUR",
-  "JPY",
-  "CNY",
-];
+const currencyCodes: string[] = ["MXN", "USD", "EUR", "JPY", "CNY"];
 
 const todayInputDate = () => dayjs().format("YYYY-MM-DD");
 
@@ -109,7 +103,7 @@ const buildDestinationSchema = (blockPastDates: boolean) =>
       stay_days: z.number().int(),
       is_hotel_required: z.boolean(),
       is_plane_required: z.boolean(),
-      details: z.string().nonempty({ message: "Agrega detalles" }),
+      details: z.string().optional(),
     })
     .superRefine((value, ctx) => {
       if (value.is_plane_required && !value.id_airport) {
@@ -282,7 +276,8 @@ function DestinationFields({
   }, [hideArrival, departureDate, idx, setValue]);
 
   const destinationErrors = errors?.[idx];
-  const minDepartureDate = blockPastDates && idx === 0 ? todayInputDate() : undefined;
+  const minDepartureDate =
+    blockPastDates && idx === 0 ? todayInputDate() : undefined;
   const minArrivalDate = blockPastDates
     ? minArrivalInputDate(departureDate)
     : departureDate
@@ -373,7 +368,8 @@ function DestinationFields({
             htmlFor={`details-${idx}`}
             className="block mb-2 text-sm font-medium text-gray-900"
           >
-            Detalles
+            Detalles{" "}
+            <span className="text-gray-400 font-normal">(opcional)</span>
           </label>
           <Input
             id={`details-${idx}`}
@@ -599,7 +595,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
   const currencySelectOptions = useMemo<Option[]>(
     () => currencyCodes.map((code) => ({ id: code, name: code })),
-    []
+    [],
   );
 
   const normalizedAdvanceMoney = Number.isFinite(advanceMoney)
@@ -608,12 +604,18 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
   const exchangeRateDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
   const shouldFetchRate =
-    !!advanceCurrency && advanceCurrency !== "MXN" && normalizedAdvanceMoney > 0;
+    !!advanceCurrency &&
+    advanceCurrency !== "MXN" &&
+    normalizedAdvanceMoney > 0;
   const {
     data: exchangeRate,
     isLoading: isRateLoading,
     error: exchangeRateError,
-  } = useExchangeRate(exchangeRateDate, advanceCurrency || "MXN", shouldFetchRate);
+  } = useExchangeRate(
+    exchangeRateDate,
+    advanceCurrency || "MXN",
+    shouldFetchRate,
+  );
 
   const advanceMoneyMxn = useMemo(() => {
     if (advanceCurrency === "MXN") {
@@ -759,11 +761,11 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     const payload = {
       id_origin_city: data.id_origin_city!,
       id_origin_airport: data.id_origin_airport || undefined,
-      title: data.motive,
+      title: data.title,
       motive: data.motive,
       requirements: data.requirements || "",
       priority: data.priority,
-      advance_money:  
+      advance_money:
         data.advance_currency === "MXN"
           ? data.advance_money
           : Number((data.advance_money * (exchangeRate?.rate || 0)).toFixed(2)),
@@ -839,21 +841,6 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
               >
                 <div className="sm:col-span-2">
                   <label
-                    htmlFor="motive"
-                    className="block mb-2 text-sm font-medium text-gray-900"
-                  >
-                    Motivo
-                  </label>
-                  <Input
-                    id="motive"
-                    {...register("motive")}
-                    placeholder="Viaje de Negocios"
-                  />
-                  <FieldError msg={errors.motive?.message} />
-                </div>
-
-                <div>
-                  <label
                     htmlFor="title"
                     className="block mb-2 text-sm font-medium text-gray-900"
                   >
@@ -865,6 +852,21 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                     placeholder="Viaje a CDMX"
                   />
                   <FieldError msg={errors.title?.message} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="motive"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Motivo
+                  </label>
+                  <Input
+                    id="motive"
+                    {...register("motive")}
+                    placeholder="Viaje de Negocios"
+                  />
+                  <FieldError msg={errors.motive?.message} />
                 </div>
 
                 <div>
@@ -999,7 +1001,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                             options={currencySelectOptions}
                             value={
                               currencySelectOptions.find(
-                                (o) => o.id === field.value
+                                (o) => o.id === field.value,
                               ) || null
                             }
                             onChange={(opt) => field.onChange(opt.id)}
@@ -1012,7 +1014,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                   <p className="text-xs text-gray-600 mt-1">
                     {advanceCurrency === "MXN"
                       ? `Se guardará en MXN: ${formatMoney(
-                          normalizedAdvanceMoney
+                          normalizedAdvanceMoney,
                         )}.`
                       : isRateLoading
                         ? "Consultando tipo de cambio a MXN..."
