@@ -8,12 +8,13 @@ import { ApprovalRule } from "../../types/approvalRules";
 
 interface UpdateApprovalRulePayload {
   ruleId: string;
-  data: Omit<ApprovalRule, "id">;
+  data: Partial<Omit<ApprovalRule, "id">>;
 }
 
 /**
  * Sends a PATCH request to update an existing approval rule.
- * @param payload Rule ID and updated data.
+ * Accepts a partial payload — only the provided fields are updated.
+ * @param payload Rule ID and partial updated data.
  * @returns Promise resolving to the updated ApprovalRule.
  */
 const updateApprovalRule = async ({
@@ -45,4 +46,6 @@ export const useUpdateApprovalRule = () => {
  * Modification History:
  * - 2026-04-08 | Juan de Dios Gastélum | Initial file creation.
  * - 2026-05-12 | Juan de Dios Gastélum | Replaced TODO with real API call.
+ * - 2026-05-26 | Juan de Dios Gastélum | Changed data payload to Partial to support
+ *   single-field updates such as priority reordering.
  */

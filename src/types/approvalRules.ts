@@ -26,7 +26,9 @@ export interface ApprovalRuleStep {
 export interface ApprovalRule {
   id: string;
   name: string;
+  description?: string;
   isActive: boolean;
+  priority: number;
   conditions: RuleCondition[];
   steps: ApprovalRuleStep[];
 }

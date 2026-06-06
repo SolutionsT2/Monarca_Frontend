@@ -1,8 +1,8 @@
 /**
  * File: Approvals.tsx
- * Description: This file contains the Approvals page component. It is responsible for 
- * displaying a list of travel requests that require approval. It fetches data from the API, 
- * formats the status badges, handles the tutorial walkthrough logic, and renders the 
+ * Description: This file contains the Approvals page component. It is responsible for
+ * displaying a list of travel requests that require approval. It fetches data from the API,
+ * formats the status badges, handles the tutorial walkthrough logic, and renders the
  * data in a table format.
  */
 
@@ -18,8 +18,8 @@ import { useApp } from "../../hooks/app/appContext";
 
 const COLUMNS = [
   { key: "status", header: "Estado" },
-  { key: "motive", header: "Viaje" },
-  { key: "title", header: "Motivo" },
+  { key: "title", header: "Título" },
+  { key: "motive", header: "Motivo" },
   { key: "departureDate", header: "Fecha Salida" },
   { key: "country", header: "Lugar de Salida" },
 ];
@@ -27,7 +27,7 @@ const COLUMNS = [
 /**
  * Renders the visual badge for a specific request status based on the API response.
  * It maps the status string to a specific text and Tailwind CSS color class.
- * 
+ *
  * @param status - The raw status string received from the backend.
  * @returns A JSX element containing the styled status badge.
  */
@@ -82,9 +82,7 @@ const renderStatus = (status: string) => {
   }
 
   return (
-    <span className={`text-xs p-1 rounded-sm ${styles}`}>
-      {statusText}
-    </span>
+    <span className={`text-xs p-1 rounded-sm ${styles}`}>{statusText}</span>
   );
 };
 
@@ -92,7 +90,7 @@ const renderStatus = (status: string) => {
  * Main component for the Approvals page.
  * Fetches pending travel requests, formats the data for the table, and handles
  * the page-specific tutorial logic using localStorage.
- * 
+ *
  * @returns The rendered Approvals page structure.
  */
 export const Approvals: React.FC = () => {
@@ -110,10 +108,10 @@ export const Approvals: React.FC = () => {
           country: trip.destination.city,
           departureDate: formatDate(
             trip.requests_destinations.sort(
-              (a: any, b: any) => a.destination_order - b.destination_order
-            )[0].departure_date
+              (a: any, b: any) => a.destination_order - b.destination_order,
+            )[0].departure_date,
           ),
-        }))
+        })),
       );
     } catch (error) {
       console.error("Error fetching travel records:", error);
@@ -127,17 +125,19 @@ export const Approvals: React.FC = () => {
   // Handle tutorial visibility based on visited pages history
   useEffect(() => {
     // Retrieve visited pages from local storage to prevent repeated tutorials
-    const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]",
+    );
     const isPageVisited = visitedPages.includes(location.pathname);
 
     if (!isPageVisited) {
       setTutorial(true);
     }
-    
+
     // Register the current page as visited on unmount/update
     return () => handleVisitPage();
   }, []);
-    
+
   return (
     <>
       <Tutorial page="approvals" run={tutorial}>
