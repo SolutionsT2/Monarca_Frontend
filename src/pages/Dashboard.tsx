@@ -235,7 +235,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="tenant_bank_accounts"
           />
         )}
-        {isApprover && (
+        {isApprover && isApproverMode && (
           <Mosaic
             title="Delegaciones de sustitutos"
             iconPath="/assets/roles.png"

@@ -247,7 +247,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               link="/admin/bank-accounts"
             />
           )}
-          {isApprover && (
+          {isApprover && isApproverMode && (
             <SidebarOption
               label="Delegaciones de sustitutos"
               pathIcon="/assets/roles.png"
