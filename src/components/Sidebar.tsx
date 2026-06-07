@@ -13,6 +13,7 @@ import SidebarOption from "./SidebarOption";
 
 import { AuthState, Permission } from "../hooks/auth/authContext";
 import Mosaic from "./Mosaic";
+import { useApp } from "../hooks/app/appContext";
 
 /**
  * Interface for Sidebar component properties.
@@ -28,6 +29,7 @@ interface SidebarProps {
  * @param isOpen Boolean state to control mobile visibility toggle.
  */
 function Sidebar({ user, isOpen }: SidebarProps) {
+  const { viewMode, setViewMode } = useApp();
   const normalizedRole = (user.userRole || "")
     .toLowerCase()
     .replace(/[_\s-]/g, "");
@@ -35,6 +37,15 @@ function Sidebar({ user, isOpen }: SidebarProps) {
   const isCompanyAdmin = normalizedRole === "companyadmin";
   const isApprover =
     normalizedRole === "approver" || normalizedRole === "aprobador";
+
+  // Determine if the user has BOTH approver and requester capabilities
+  const hasApproverRole = user.userPermissions.includes("approve_request" as Permission);
+  const hasRequesterRole = user.userPermissions.includes("create_request" as Permission);
+  const isDualRole = hasApproverRole && hasRequesterRole;
+
+  // Effective mode: if user isn't dual-role, always show all their options
+  const isApproverMode = !isDualRole || viewMode === "approver";
+  const isRequesterMode = !isDualRole || viewMode === "requester";
 
   return (
     <aside
@@ -57,22 +68,55 @@ function Sidebar({ user, isOpen }: SidebarProps) {
           </p>
         </div>
         <ul className="space-y-2 font-medium">
+          {/* -------- View Mode Toggle (only for dual-role users) -------- */}
+          {isDualRole && (
+            <li className="mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2 px-1">
+                Vista actual
+              </p>
+              <div className="flex items-center bg-[var(--dark-blue)] rounded-xl p-1 gap-1">
+                <button
+                  onClick={() => setViewMode("approver")}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    viewMode === "approver"
+                      ? "bg-white text-[var(--dark-blue)] shadow"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  Aprobador
+                </button>
+                <button
+                  onClick={() => setViewMode("requester")}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    viewMode === "requester"
+                      ? "bg-white text-[var(--dark-blue)] shadow"
+                      : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  Solicitante
+                </button>
+              </div>
+            </li>
+          )}
+          {/* ----------------------------------------------------------- */}
+
           <SidebarOption
             label="Inicio"
             pathIcon="/assets/dashboard.png"
             link="/dashboard"
             invertIcon
           />
-          {user.userPermissions.includes("create_request" as Permission) && (
+          {isRequesterMode && user.userPermissions.includes("create_request" as Permission) && (
             <SidebarOption
               label="Crear solicitud de viaje"
               pathIcon="/assets/crear_solicitud_de_viaje.png"
               link="/requests/create"
             />
           )}
-          {user.userPermissions.includes(
-            "view_assigned_requests_readonly" as Permission,
-          ) &&
+          {isRequesterMode &&
+            user.userPermissions.includes(
+              "view_assigned_requests_readonly" as Permission,
+            ) &&
             user.userPermissions.includes("create_request" as Permission) && (
               <SidebarOption
                 label="Historial de viajes"
@@ -80,30 +124,31 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/history"
               />
             )}
-          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+          {isRequesterMode && user.userPermissions.includes("upload_vouchers" as Permission) && (
             <SidebarOption
               label="Comprobar gastos"
               pathIcon="/assets/solicitud_de_reembolso.png"
               link="/refunds"
             />
           )}
-          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+          {isRequesterMode && user.userPermissions.includes("upload_vouchers" as Permission) && (
             <SidebarOption
               label="Historial de comprobantes"
               pathIcon="/assets/historial_de_reembolsos_aprobados.png"
               link="/vouchers-history"
             />
           )}
-          {user.userPermissions.includes("approve_request" as Permission) && (
+          {isApproverMode && user.userPermissions.includes("approve_request" as Permission) && (
             <SidebarOption
               label="Viajes por aprobar"
               pathIcon="/assets/viajes_por_aprobar.png"
               link="/approvals"
             />
           )}
-          {user.userPermissions.includes(
-            "view_assigned_requests_readonly" as Permission,
-          ) &&
+          {isApproverMode &&
+            user.userPermissions.includes(
+              "view_assigned_requests_readonly" as Permission,
+            ) &&
             user.userPermissions.includes("approve_request" as Permission) && (
               <SidebarOption
                 label="Historial de viajes aprobados"
@@ -111,7 +156,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/history?scope=approver"
               />
             )}
-          {user.userPermissions.includes("approve_vouchers" as Permission) && (
+          {isApproverMode && user.userPermissions.includes("approve_vouchers" as Permission) && (
             <SidebarOption
               label="Comprobantes de gastos por aprobar"
               pathIcon="/assets/comprobantes_de_gastos_por_aprobar.png"

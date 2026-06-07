@@ -16,7 +16,7 @@ interface DashboardProps {
 export const Dashboard = ({ title }: DashboardProps) => {
   const { setPageTitle } = useApp();
   const { authState } = useAuth();
-  const { handleVisitPage, tutorial, setTutorial } = useApp();
+  const { handleVisitPage, tutorial, setTutorial, viewMode } = useApp();
   const normalizedRole = (authState.userRole || "")
     .toLowerCase()
     .replace(/[_\s-]/g, "");
@@ -24,6 +24,13 @@ export const Dashboard = ({ title }: DashboardProps) => {
   const isCompanyAdmin = normalizedRole === "companyadmin";
   const isApprover =
     normalizedRole === "approver" || normalizedRole === "aprobador";
+
+  // Dual-role detection
+  const hasApproverPerm = authState.userPermissions.includes("approve_request" as Permission);
+  const hasRequesterPerm = authState.userPermissions.includes("create_request" as Permission);
+  const isDualRole = hasApproverPerm && hasRequesterPerm;
+  const isApproverMode = !isDualRole || viewMode === "approver";
+  const isRequesterMode = !isDualRole || viewMode === "requester";
 
   // Set the page title when the component mounts
   useEffect(() => {
@@ -49,7 +56,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
   return (
     <Tutorial page="dashboard" run={tutorial}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-16 py-10 justify-items-center">
-        {authState.userPermissions.includes("create_request" as Permission) && (
+        {isRequesterMode && authState.userPermissions.includes("create_request" as Permission) && (
           <Mosaic
             title="Crear solicitud de viaje"
             iconPath="/assets/crear_solicitud_de_viaje.png"
@@ -57,9 +64,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="create-request"
           />
         )}
-        {authState.userPermissions.includes(
-          "view_assigned_requests_readonly" as Permission,
-        ) &&
+        {isRequesterMode &&
+          authState.userPermissions.includes(
+            "view_assigned_requests_readonly" as Permission,
+          ) &&
           authState.userPermissions.includes(
             "create_request" as Permission,
           ) && (
@@ -70,7 +78,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
               id="history"
             />
           )}
-        {authState.userPermissions.includes(
+        {isRequesterMode && authState.userPermissions.includes(
           "upload_vouchers" as Permission,
         ) && (
           <Mosaic
@@ -80,7 +88,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="upload_vouchers"
           />
         )}
-        {authState.userPermissions.includes(
+        {isRequesterMode && authState.userPermissions.includes(
           "upload_vouchers" as Permission,
         ) && (
           <Mosaic
@@ -90,7 +98,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="vouchers_history"
           />
         )}
-        {authState.userPermissions.includes(
+        {isApproverMode && authState.userPermissions.includes(
           "approve_request" as Permission,
         ) && (
           <Mosaic
@@ -100,9 +108,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="approve_request"
           />
         )}
-        {authState.userPermissions.includes(
-          "view_assigned_requests_readonly" as Permission,
-        ) &&
+        {isApproverMode &&
+          authState.userPermissions.includes(
+            "view_assigned_requests_readonly" as Permission,
+          ) &&
           authState.userPermissions.includes(
             "approve_request" as Permission,
           ) && (
@@ -113,7 +122,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
               id="approved_requests"
             />
           )}
-        {authState.userPermissions.includes(
+        {isApproverMode && authState.userPermissions.includes(
           "approve_vouchers" as Permission,
         ) && (
           <Mosaic
