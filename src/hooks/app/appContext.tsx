@@ -3,12 +3,16 @@ Additionally, it includes a handleVisitPage function that tracks visited routes 
 
 import React, { createContext, useContext, ReactNode } from "react";
 
+export type ViewMode = "approver" | "requester";
+
 export interface ContextType {
   pageTitle: string;
   setPageTitle: (title: string) => void;
   handleVisitPage: () => void;
   tutorial: boolean;
   setTutorial: (tutorial: boolean) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 // Create the app
@@ -30,6 +34,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [pageTitle, setPageTitle] = React.useState<string>("Sin título");
   const [tutorial, setTutorial] = React.useState<boolean>(false);
+  const [viewMode, setViewModeState] = React.useState<ViewMode>(
+    () => (localStorage.getItem("viewMode") as ViewMode) || "approver"
+  );
+
+  const setViewMode = (mode: ViewMode) => {
+    setViewModeState(mode);
+    localStorage.setItem("viewMode", mode);
+  };
 
   const handleVisitPage = () => {
     const visitedPages = JSON.parse(
@@ -62,6 +74,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({
         handleVisitPage,
         tutorial,
         setTutorial,
+        viewMode,
+        setViewMode,
       }}
     >
       {children}
